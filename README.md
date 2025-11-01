@@ -19,12 +19,16 @@ An interactive web app for parsing Costco receipts, grouping discounts and fees,
 - **Equal Split**: Divide item costs evenly among selected profiles
 - **Parts Split**: Allocate integer parts (1-10) with real-time validation
 - **Live Preview**: See exact dollar amounts as you assign
+- **Assignment Popup**: Click "Assign" button to open a modal for easy editing
+- **On-the-fly Adjustments**: Change split mode and allocations in the popup
 
 ### Interactive UI
 - **Table View**: Spreadsheet-like interface with all items visible
+- **Assignment Popup**: Click "Assign" to open a focused modal for easy editing
 - **Flashcard Mode**: Step through items one-by-one with progress tracking
-- **Drag Selection**: Click-and-drag across rows to multi-select
+- **Auto-scroll**: Keyboard navigation automatically scrolls focused row into view
 - **Progress Bars**: Visual feedback showing allocation completeness
+- **Product Lookup**: Fetch product images from Costco CDN or web search
 
 ### Keyboard Shortcuts
 - `↑/↓` - Navigate items
@@ -76,14 +80,28 @@ npm run build
 
 This app is configured for GitHub Pages deployment:
 
-1. Push to `main` branch
-2. GitHub Actions automatically builds and deploys
-3. Visit `https://your-username.github.io/costco-receipt-splitter/`
+### Initial Setup
 
-The `deploy.yml` workflow:
+1. Create a new repository on GitHub named `costco-receipt-splitter`
+2. Link your local repository:
+   ```bash
+   git remote add origin https://github.com/your-username/costco-receipt-splitter.git
+   git branch -M main
+   git push -u origin main
+   ```
+3. Enable GitHub Pages in repository settings:
+   - Go to Settings > Pages
+   - Source: GitHub Actions
+   - The workflow will automatically deploy on push to main
+
+### Automatic Deployment
+
+The `deploy.yml` workflow automatically:
 - Builds the app with the correct base path
-- Copies `index.html` to `404.html` for SPA routing
 - Deploys to GitHub Pages
+- Makes the site available at `https://your-username.github.io/costco-receipt-splitter/`
+
+After pushing to main, the site will be live within a few minutes!
 
 ## Usage
 
