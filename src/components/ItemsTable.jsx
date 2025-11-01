@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { calculateItemProgress, formatCurrency } from '../utils/allocation';
 import SharedAssignmentControls from './SharedAssignmentControls';
-import AssignmentPopup from './AssignmentPopup';
-import { getCostcoSearchUrl, getGoogleImagesUrl } from '../utils/productLookup';
+import { getGoogleImagesUrl } from '../utils/productLookup';
 
 function ItemsTable({
   items,
@@ -17,7 +16,6 @@ function ItemsTable({
   onSetProfileParts,
   onProductLookup
 }) {
-  const [popupItemIndex, setPopupItemIndex] = useState(null);
   const rowRefs = useRef([]);
 
   // Scroll to focused row when it changes
@@ -31,8 +29,7 @@ function ItemsTable({
   }, [focusedRow]);
 
   return (
-    <>
-      <div className="overflow-x-auto">
+    <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-100">
@@ -112,12 +109,16 @@ function ItemsTable({
                 {formatCurrency(item.lineTotal)}
               </td>
               <td className="border p-2" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => setPopupItemIndex(idx)}
-                  className="px-4 py-2 bg-plum-600 text-white rounded-lg hover:bg-plum-700 transition font-medium text-sm w-full"
-                >
-                  Assign
-                </button>
+                <SharedAssignmentControls
+                  item={item}
+                  itemIndex={idx}
+                  profiles={profiles}
+                  onToggleProfile={onToggleProfile}
+                  onSetMode={onSetMode}
+                  onSetTotalParts={onSetTotalParts}
+                  onSetProfileParts={onSetProfileParts}
+                  onUpdateShare={onUpdateShare}
+                />
               </td>
               <td className="border p-2 text-center">
                 {item.lookingUp ? (
@@ -144,15 +145,7 @@ function ItemsTable({
                     🔍 Look up
                   </button>
                 )}
-                <div className="mt-1 space-y-1">
-                  <a
-                    href={getCostcoSearchUrl(item.code, item.name)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline block"
-                  >
-                    Costco.com
-                  </a>
+                <div className="mt-1">
                   <a
                     href={getGoogleImagesUrl(item.code, item.name)}
                     target="_blank"
@@ -168,21 +161,6 @@ function ItemsTable({
         </tbody>
       </table>
     </div>
-
-    {/* Assignment Popup */}
-    <AssignmentPopup
-      isOpen={popupItemIndex !== null}
-      onClose={() => setPopupItemIndex(null)}
-      item={popupItemIndex !== null ? items[popupItemIndex] : null}
-      itemIndex={popupItemIndex}
-      profiles={profiles}
-      onToggleProfile={onToggleProfile}
-      onSetMode={onSetMode}
-      onSetTotalParts={onSetTotalParts}
-      onSetProfileParts={onSetProfileParts}
-      onUpdateShare={onUpdateShare}
-    />
-  </>
   );
 }
 
