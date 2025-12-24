@@ -19,6 +19,7 @@ import TotalsSummary from './components/TotalsSummary';
 import DoubleChecksPanel from './components/DoubleChecksPanel';
 import PandasSnippet from './components/PandasSnippet';
 import BatchApplyPreview from './components/BatchApplyPreview';
+import AddProfileDialog from './components/AddProfileDialog';
 import { getGoogleImagesUrl } from './utils/productLookup';
 
 // Example receipts for quick testing
@@ -53,10 +54,8 @@ function App() {
   const [receiptText, setReceiptText] = useState('');
   const [taxRate, setTaxRate] = useState(7.75);
   const [items, setItems] = useState([]);
-  const [profiles, setProfiles] = useState([
-    { name: 'Scott', avatar: null },
-    { name: 'Xiaowen', avatar: null }
-  ]);
+  const [profiles, setProfiles] = useState([]);
+  const [showAddProfileDialog, setShowAddProfileDialog] = useState(false);
   const [receiptTotals, setReceiptTotals] = useState({});
   const [computed, setComputed] = useState({});
   const [selectedRows, setSelectedRows] = useState(new Set());
@@ -103,28 +102,31 @@ function App() {
   };
 
   // Profile management
-  const addProfile = () => {
-    const name = prompt('Enter profile name:');
-    if (name && !profiles.find(p => p.name === name)) {
+  const addProfile = (name) => {
+    if (name && !profiles.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+      setProfiles([...profiles, { name, avatar: null }]);
+    }
+  };
+
+  const addCandidateProfile = (name) => {
+    if (!profiles.find(p => p.name === name)) {
       setProfiles([...profiles, { name, avatar: null }]);
     }
   };
 
   const removeProfile = (name) => {
-    if (confirm(`Remove ${name}?`)) {
-      setProfiles(profiles.filter(p => p.name !== name));
-      // Clean up allocations
-      setItems(items.map(item => ({
-        ...item,
-        share: {
-          ...item.share,
-          selected: item.share.selected.filter(n => n !== name),
-          parts: Object.fromEntries(
-            Object.entries(item.share.parts).filter(([k]) => k !== name)
-          )
-        }
-      })));
-    }
+    setProfiles(profiles.filter(p => p.name !== name));
+    // Clean up allocations
+    setItems(items.map(item => ({
+      ...item,
+      share: {
+        ...item.share,
+        selected: item.share.selected.filter(n => n !== name),
+        parts: Object.fromEntries(
+          Object.entries(item.share.parts).filter(([k]) => k !== name)
+        )
+      }
+    })));
   };
 
   const uploadAvatar = (profileName, file) => {
@@ -253,45 +255,60 @@ function App() {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (items.length === 0) return;
 
+      // Determine current item index based on mode
+      const currentItemIndex = flashcardMode ? flashcardIndex : focusedRow;
+
       switch (e.key) {
         case 'ArrowUp':
+        case 'ArrowLeft':
           e.preventDefault();
-          setFocusedRow(Math.max(0, focusedRow - 1));
+          if (flashcardMode) {
+            setFlashcardIndex(Math.max(0, flashcardIndex - 1));
+          } else {
+            setFocusedRow(Math.max(0, focusedRow - 1));
+          }
           break;
         case 'ArrowDown':
+        case 'ArrowRight':
           e.preventDefault();
-          setFocusedRow(Math.min(items.length - 1, focusedRow + 1));
+          if (flashcardMode) {
+            setFlashcardIndex(Math.min(items.length - 1, flashcardIndex + 1));
+          } else {
+            setFocusedRow(Math.min(items.length - 1, focusedRow + 1));
+          }
           break;
         case ' ':
           e.preventDefault();
-          toggleRowSelection(focusedRow);
+          if (!flashcardMode) {
+            toggleRowSelection(focusedRow);
+          }
           break;
         case 'e':
         case 'E':
-          setItemMode(focusedRow, 'equal');
+          setItemMode(currentItemIndex, 'equal');
           break;
         case 'p':
         case 'P':
-          setItemMode(focusedRow, 'parts');
+          setItemMode(currentItemIndex, 'parts');
           break;
         case 'a':
         case 'A':
-          if (items[focusedRow]) {
+          if (items[currentItemIndex]) {
             const share = {
-              ...items[focusedRow].share,
+              ...items[currentItemIndex].share,
               selected: profiles.map(p => p.name),
-              parts: items[focusedRow].share.mode === 'parts'
+              parts: items[currentItemIndex].share.mode === 'parts'
                 ? Object.fromEntries(profiles.map(p => [p.name, 0]))
                 : {}
             };
-            updateItemShare(focusedRow, share);
+            updateItemShare(currentItemIndex, share);
           }
           break;
         case 'n':
         case 'N':
-          if (items[focusedRow]) {
-            updateItemShare(focusedRow, {
-              ...items[focusedRow].share,
+          if (items[currentItemIndex]) {
+            updateItemShare(currentItemIndex, {
+              ...items[currentItemIndex].share,
               selected: [],
               parts: {}
             });
@@ -299,14 +316,16 @@ function App() {
           break;
         case 'x':
         case 'X':
-          applyToSelected();
+          if (!flashcardMode) {
+            applyToSelected();
+          }
           break;
         default:
           // Handle 1-9 for toggling profiles
           if (e.key >= '1' && e.key <= '9') {
             const profileIndex = parseInt(e.key) - 1;
-            if (profiles[profileIndex] && items[focusedRow]) {
-              toggleProfileForItem(focusedRow, profiles[profileIndex].name);
+            if (profiles[profileIndex] && items[currentItemIndex]) {
+              toggleProfileForItem(currentItemIndex, profiles[profileIndex].name);
             }
           }
       }
@@ -314,7 +333,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedRow, items, profiles, selectedRows, lastShare]);
+  }, [focusedRow, flashcardIndex, flashcardMode, items, profiles, selectedRows, lastShare]);
 
   // OCR processing
   const handleImageUpload = async (file) => {
@@ -427,25 +446,49 @@ function App() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
             Costco Receipt Splitter
           </h1>
-          <p className="text-gray-600">
-            Parse receipts, assign items to profiles, and split costs accurately
+          <p className="text-lg text-gray-700 mb-3">
+            Designed specifically for Costco receipts and group orders
           </p>
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-plum-500 p-4 rounded-r-lg">
+            <p className="text-gray-800 mb-2">
+              <strong>Solve the headache of splitting bills with friends!</strong>
+            </p>
+            <p className="text-gray-700 text-sm mb-2">
+              Going to Costco with friends but struggling to split the big receipt? This tool helps you:
+            </p>
+            <ul className="text-sm text-gray-700 space-y-1 ml-4 list-disc">
+              <li>Parse Costco receipts and split costs accurately among multiple people</li>
+              <li>Understand cryptic product names (like "H DAZ VAN") with Google Images search</li>
+              <li>Handle discounts, fees, and tax calculations automatically</li>
+              <li>Track who pays for what with flexible splitting options</li>
+            </ul>
+          </div>
         </div>
 
         {/* Input Section */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">1. Receipt Input</h2>
           <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+              <h3 className="font-semibold text-blue-900 mb-2">📝 How to get your receipt:</h3>
+              <ol className="text-sm text-blue-800 space-y-1 ml-4 list-decimal">
+                <li>Go to <a href="https://www.costco.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">costco.com</a></li>
+                <li>Click <strong>"Orders & Returns"</strong> in the upper right corner</li>
+                <li>Select <strong>"Warehouse Orders"</strong> tab</li>
+                <li>Find your receipt and click to view details</li>
+                <li>Copy the receipt text and paste below</li>
+              </ol>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Paste receipt text or upload image
+                Paste receipt text here
               </label>
               <textarea
                 className="w-full h-32 p-3 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-plum-500 focus:border-transparent"
-                placeholder="Paste receipt text here..."
+                placeholder="E 1392843 AVOCA SPRAY 13.79 N&#10;357950 /1392843 4.20-&#10;E 11153 ST LOUIS RIB 27.11 N&#10;..."
                 value={receiptText}
                 onChange={(e) => setReceiptText(e.target.value)}
               />
@@ -457,12 +500,15 @@ function App() {
               >
                 📋 Parse Receipt
               </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-plum-600 text-white rounded-lg hover:bg-plum-700 transition"
-              >
-                Upload Image (OCR)
-              </button>
+              {/* OCR functionality hidden but kept for future use */}
+              {false && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 bg-plum-600 text-white rounded-lg hover:bg-plum-700 transition"
+                >
+                  Upload Image (OCR)
+                </button>
+              )}
               <button
                 onClick={() => {
                   setReceiptText(EXAMPLE_A);
@@ -537,6 +583,7 @@ function App() {
           onAdd={addProfile}
           onRemove={removeProfile}
           onUploadAvatar={uploadAvatar}
+          onAddCandidate={addCandidateProfile}
         />
 
         {/* Items Table or Flashcard */}
