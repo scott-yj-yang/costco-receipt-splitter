@@ -9,7 +9,8 @@ import Decimal from 'decimal.js-light';
 const PRODUCT_PATTERN = /^(E\s+)?(\d+)\s+(.+?)\s+(\d+\.\d{2})\s+([YN])$/;
 
 // Discount line pattern: <discCode> (/#)<ref> <amount>-
-const DISCOUNT_PATTERN = /^(\d+)\s+(\/|#)(\d+)\s+(\d+\.\d{2})-$/;
+// Allows optional spaces around the slash/hash (handles both "/ 1801" and "/1801")
+const DISCOUNT_PATTERN = /^(\d+)\s+(\/|#)\s*(\d+)\s+(\d+\.\d{2})-$/;
 
 // Fee line pattern: <code> <text possibly with EE/<ref>> <amount>
 const FEE_PATTERN = /^(\d+)\s+(.+?)\s+(\d+\.\d{2})$/;

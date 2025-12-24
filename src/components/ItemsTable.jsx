@@ -13,8 +13,7 @@ function ItemsTable({
   onToggleProfile,
   onSetMode,
   onSetTotalParts,
-  onSetProfileParts,
-  onProductLookup
+  onSetProfileParts
 }) {
   const rowRefs = useRef([]);
 
@@ -41,7 +40,7 @@ function ItemsTable({
             <th className="border p-2 text-right">Tax Amt</th>
             <th className="border p-2 text-right">Total</th>
             <th className="border p-2 text-left min-w-[500px]">Assignment</th>
-            <th className="border p-2 text-center">Lookup</th>
+            <th className="border p-2 text-center">Product</th>
           </tr>
         </thead>
         <tbody>
@@ -121,40 +120,18 @@ function ItemsTable({
                 />
               </td>
               <td className="border p-2 text-center">
-                {item.lookingUp ? (
-                  <div className="text-sm text-gray-500">Loading...</div>
-                ) : item.enrichment?.imageUrl ? (
-                  <div className="space-y-2">
-                    <img
-                      src={item.enrichment.imageUrl}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded mx-auto"
-                    />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onProductLookup(idx); }}
-                      className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                    >
-                      Refresh
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onProductLookup(idx); }}
-                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-                  >
-                    🔍 Look up
-                  </button>
-                )}
-                <div className="mt-1">
-                  <a
-                    href={getGoogleImagesUrl(item.code, item.name)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline block"
-                  >
-                    Google Images
-                  </a>
-                </div>
+                <a
+                  href={getGoogleImagesUrl(item.code, item.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  Google Images
+                </a>
               </td>
             </tr>
           ))}

@@ -145,88 +145,99 @@ function SharedAssignmentControls({
       {item.share.mode === 'parts' && (
         <div className="space-y-3 pt-2 pl-2 border-l-4 border-plum-200">
           {/* Total parts control */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
             <span className="text-sm font-medium text-gray-700 min-w-[80px]">Total parts:</span>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={item.share.totalParts}
-              onChange={(e) => onSetTotalParts(itemIndex, parseInt(e.target.value))}
-              className="flex-1 h-2 accent-plum-600"
-            />
             <input
               type="number"
               min="1"
-              max="10"
+              max="100"
               value={item.share.totalParts}
               onChange={(e) => onSetTotalParts(itemIndex, parseInt(e.target.value) || 1)}
-              className="w-16 px-2 py-1 border-2 border-gray-200 rounded-lg text-center font-medium focus:border-plum-400 focus:outline-none"
+              className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center font-bold text-lg focus:border-plum-500 focus:outline-none"
             />
+            <span className="text-xs text-gray-500 italic">
+              (e.g., 3 for thirds, 4 for quarters, 10 for tenths)
+            </span>
           </div>
 
           {item.share.selected.length === 0 && (
-            <div className="text-sm text-gray-500 italic">Select profiles above to assign parts</div>
+            <div className="text-sm text-gray-500 italic p-3 bg-gray-50 rounded-lg">
+              Select profiles above to assign parts
+            </div>
           )}
 
-          {/* Individual parts sliders */}
-          {item.share.selected.map((profileName) => {
-            const maxParts = getMaxParts(item.share, profileName);
-            const currentParts = item.share.parts[profileName] || 0;
-            const allocation = allocations[profileName];
+          {/* Individual parts inputs - simple number inputs only */}
+          {item.share.selected.length > 0 && (
+            <div className="space-y-2">
+              {item.share.selected.map((profileName) => {
+                const currentParts = item.share.parts[profileName] || 0;
+                const allocation = allocations[profileName];
+                const totalAssigned = item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0);
 
-            return (
-              <div key={profileName} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-gray-700">{profileName}</span>
-                  <span className="text-gray-500">
-                    {currentParts}/{item.share.totalParts}
+                return (
+                  <div key={profileName} className="flex items-center gap-3 bg-white p-3 rounded-lg border-2 border-gray-200">
+                    <span className="font-medium text-gray-700 min-w-[100px]">{profileName}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max={item.share.totalParts}
+                      value={currentParts}
+                      onChange={(e) => onSetProfileParts(itemIndex, profileName, parseInt(e.target.value) || 0)}
+                      className="w-20 px-3 py-2 border-2 border-gray-300 rounded-lg text-center font-bold focus:border-plum-500 focus:outline-none"
+                    />
+                    <span className="text-sm text-gray-500">
+                      / {item.share.totalParts} parts
+                    </span>
                     {allocation && allocation.gt(0) && (
-                      <span className="ml-2 font-medium text-plum-600">
+                      <span className="ml-auto font-bold text-plum-600">
                         {formatCurrency(allocation)}
                       </span>
                     )}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max={maxParts}
-                    value={currentParts}
-                    onChange={(e) => onSetProfileParts(itemIndex, profileName, parseInt(e.target.value))}
-                    className="flex-1 h-2 accent-plum-600"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    max={maxParts}
-                    value={currentParts}
-                    onChange={(e) => onSetProfileParts(itemIndex, profileName, parseInt(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 border-2 border-gray-200 rounded-lg text-center font-medium focus:border-plum-400 focus:outline-none"
-                  />
-                </div>
-              </div>
-            );
-          })}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-          {/* Parts allocation progress */}
+          {/* Parts allocation summary with visual progress */}
           {item.share.selected.length > 0 && (
-            <div className="pt-2">
-              <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                <span>Parts assigned</span>
-                <span>
-                  {item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0)}/{item.share.totalParts}
+            <div className="pt-2 bg-gray-50 p-3 rounded-lg">
+              <div className="flex items-center justify-between text-sm font-medium mb-2">
+                <span className="text-gray-700">Total assigned:</span>
+                <span className={`text-lg font-bold ${
+                  item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) === item.share.totalParts
+                    ? 'text-green-600'
+                    : item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) > item.share.totalParts
+                    ? 'text-red-600'
+                    : 'text-orange-500'
+                }`}>
+                  {item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0)} / {item.share.totalParts}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                 <div
-                  className="bg-plum-500 h-2 rounded-full transition-all"
+                  className={`h-3 rounded-full transition-all ${
+                    item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) === item.share.totalParts
+                      ? 'bg-green-500'
+                      : item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) > item.share.totalParts
+                      ? 'bg-red-500'
+                      : 'bg-orange-400'
+                  }`}
                   style={{
                     width: `${Math.min(100, (item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) / item.share.totalParts) * 100)}%`
                   }}
                 />
               </div>
+              {item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) > item.share.totalParts && (
+                <div className="mt-2 text-xs text-red-600 font-medium">
+                  ⚠️ Warning: Total assigned exceeds total parts!
+                </div>
+              )}
+              {item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) < item.share.totalParts && item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0) > 0 && (
+                <div className="mt-2 text-xs text-orange-600 font-medium">
+                  ℹ️ {item.share.totalParts - item.share.selected.reduce((sum, name) => sum + (item.share.parts[name] || 0), 0)} parts remaining
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -19,7 +19,7 @@ import TotalsSummary from './components/TotalsSummary';
 import DoubleChecksPanel from './components/DoubleChecksPanel';
 import PandasSnippet from './components/PandasSnippet';
 import BatchApplyPreview from './components/BatchApplyPreview';
-import { lookupCostcoProduct, getCostcoSearchUrl, getGoogleImagesUrl } from './utils/productLookup';
+import { getGoogleImagesUrl } from './utils/productLookup';
 
 // Example receipts for quick testing
 const EXAMPLE_A = `Member 111954268765
@@ -69,8 +69,8 @@ function App() {
   const fileInputRef = useRef(null);
   const jsonInputRef = useRef(null);
 
-  // Parse receipt when text or tax rate changes
-  useEffect(() => {
+  // Manual parse function
+  const handleParseReceipt = () => {
     if (receiptText.trim()) {
       const parsed = parseReceipt(receiptText, taxRate);
       setItems(parsed.items);
@@ -81,7 +81,17 @@ function App() {
       setReceiptTotals({});
       setComputed({});
     }
-  }, [receiptText, taxRate]);
+  };
+
+  // Auto-parse only when tax rate changes (not when text changes)
+  useEffect(() => {
+    if (items.length > 0) {
+      const parsed = parseReceipt(receiptText, taxRate);
+      setItems(parsed.items);
+      setReceiptTotals(parsed.receiptTotals);
+      setComputed(parsed.computed);
+    }
+  }, [taxRate]);
 
   // Recalculate when tax rate changes
   const handleTaxRateChange = (newRate) => {
@@ -127,28 +137,6 @@ function App() {
     reader.readAsDataURL(file);
   };
 
-  // Product lookup
-  const handleProductLookup = async (itemIndex) => {
-    const item = items[itemIndex];
-    if (!item) return;
-
-    // Set loading state
-    setItems(items.map((it, idx) =>
-      idx === itemIndex ? { ...it, lookingUp: true } : it
-    ));
-
-    try {
-      const result = await lookupCostcoProduct(item.code, item.name);
-      setItems(items.map((it, idx) =>
-        idx === itemIndex ? { ...it, enrichment: result, lookingUp: false } : it
-      ));
-    } catch (error) {
-      console.error('Lookup error:', error);
-      setItems(items.map((it, idx) =>
-        idx === itemIndex ? { ...it, lookingUp: false } : it
-      ));
-    }
-  };
 
   // Item share management
   const updateItemShare = (index, share) => {
@@ -341,6 +329,13 @@ function App() {
       });
       setReceiptText(result.data.text);
       setOcrProgress(null);
+      // Auto-parse after OCR
+      setTimeout(() => {
+        const parsed = parseReceipt(result.data.text, taxRate);
+        setItems(parsed.items);
+        setReceiptTotals(parsed.receiptTotals);
+        setComputed(parsed.computed);
+      }, 100);
     } catch (error) {
       console.error('OCR error:', error);
       alert('OCR failed. Please try pasting text instead.');
@@ -457,19 +452,43 @@ function App() {
             </div>
             <div className="flex gap-2 flex-wrap">
               <button
+                onClick={handleParseReceipt}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold shadow-md"
+              >
+                📋 Parse Receipt
+              </button>
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 className="px-4 py-2 bg-plum-600 text-white rounded-lg hover:bg-plum-700 transition"
               >
                 Upload Image (OCR)
               </button>
               <button
-                onClick={() => setReceiptText(EXAMPLE_A)}
+                onClick={() => {
+                  setReceiptText(EXAMPLE_A);
+                  // Auto-parse example
+                  setTimeout(() => {
+                    const parsed = parseReceipt(EXAMPLE_A, taxRate);
+                    setItems(parsed.items);
+                    setReceiptTotals(parsed.receiptTotals);
+                    setComputed(parsed.computed);
+                  }, 0);
+                }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
               >
                 Load Example A
               </button>
               <button
-                onClick={() => setReceiptText(EXAMPLE_B)}
+                onClick={() => {
+                  setReceiptText(EXAMPLE_B);
+                  // Auto-parse example
+                  setTimeout(() => {
+                    const parsed = parseReceipt(EXAMPLE_B, taxRate);
+                    setItems(parsed.items);
+                    setReceiptTotals(parsed.receiptTotals);
+                    setComputed(parsed.computed);
+                  }, 0);
+                }}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
               >
                 Load Example B
@@ -561,7 +580,6 @@ function App() {
                   onSetMode={setItemMode}
                   onSetTotalParts={setItemTotalParts}
                   onSetProfileParts={setProfileParts}
-                  onProductLookup={handleProductLookup}
                 />
               )}
             </div>
